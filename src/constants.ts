@@ -12,13 +12,15 @@ export const defaultPaginate: PaginateQuery = {
 };
 
 export const DEFAULT_MAX_SIZE = 100;
+export const DEFAULT_OPERAND_SEPARATOR = ':';
 
 export const defaultPaginateOptions: Required<PaginateOptions> = {
   enableUnpaged: false,
   enableSize: true,
   enableSort: true,
   limit: null,
-  maxSize: DEFAULT_MAX_SIZE
+  maxSize: DEFAULT_MAX_SIZE,
+  operandSeparator: DEFAULT_OPERAND_SEPARATOR
 };
 
 export const sortRegex = {

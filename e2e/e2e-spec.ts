@@ -1,34 +1,40 @@
-import * as request from 'supertest';
+import request, { Response as SuperAgentResponse } from 'supertest';
 import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ExpressAdapter, NestExpressApplication } from '@nestjs/platform-express';
+import { Application } from 'express';
+import fastify, { FastifyInstance } from 'fastify';
+import fastifyQs from 'fastify-qs';
 import { ApplicationModule } from './src/app.module';
-import { PaginateQuery, Sort } from '../src';
-import { makeTestData } from './src/testData';
+import { Sort } from '../src';
+import { makeTestData, startDate } from './src/testData';
 import { TestDto } from './src/test.dto';
 import { QueryOrder } from '@mikro-orm/core';
+//import { Test, TestingModule } from '@nestjs/testing';
 
-const defaultPageable: PaginateQuery = {
-  currentPage: 1,
-  offset: 0,
-  itemsPerPage: 10,
-  unpaged: false,
-  totalPages: 100,
-  totalItems: 1000,
-  sortBy: [],
-  filter: {}
-};
+function isFastify(instance: object): instance is FastifyInstance {
+  return Object.hasOwn(instance, 'register');
+}
 
 describe('pageable', () => {
-  let app: NestExpressApplication;
+  let app: NestExpressApplication | NestFastifyApplication;
   let testData: TestDto[];
 
   beforeEach(async () => {
     testData = makeTestData();
-    const express = require('express');
-    const server = express();
-    const adapter = new ExpressAdapter(server);
-    app = await NestFactory.create<NestExpressApplication>(ApplicationModule, adapter, { logger: false });
+
+    app = await NestFactory.create<NestExpressApplication>(ApplicationModule, new ExpressAdapter(), { logger: false });
+    //app = await NestFactory.create<NestFastifyApplication>(ApplicationModule, new FastifyAdapter(), { logger: false });
     await app.init();
+
+    const instance = app.getHttpAdapter().getInstance();
+
+    if (isFastify(instance)) {
+      await instance.register(fastifyQs);
+      await instance.ready();
+    } else {
+      (instance as Application).set('query parser', 'extended');
+    }
   });
 
   afterEach(async () => {
@@ -96,6 +102,23 @@ describe('pageable', () => {
           expect(response.body.data).toStrictEqual(testData.filter((data) => data.id >= 2 && data.id <= 4).map((t) => serialize(t)));
         });
     });
+    it('should support changing the operaand', () => {
+      const ourDatePlusFive = new Date(startDate);
+      ourDatePlusFive.setDate(ourDatePlusFive.getDate() + 5);
+      return request(app.getHttpServer())
+        .get(`/test/change-operand-separator?filter[updatedAt]=${encodeURIComponent(`$lt@@@${ourDatePlusFive.toISOString()}`)}`)
+        .expect(200)
+        .expect((response) => {
+          expect(response.body.data).toStrictEqual(
+            testData
+              .slice(0, 5)
+              .filter((data) => {
+                return data.updatedAt.getTime() <= ourDatePlusFive.getTime();
+              })
+              .map((t) => serialize(t))
+          );
+        });
+    });
   });
 
   describe('sorting', () => {
@@ -114,7 +137,7 @@ describe('pageable', () => {
 
     it('should return the first page with sorting by description (DESC, nulls first)', () => {
       return request(app.getHttpServer())
-        .get('/test?sortBy=property[description];direction[desc];nulls-first[true];')
+        .get('/test?sortBy=property[description];direction[desc];nulls-first[true];&sortBy=property[id];direction[asc];')
         .expect(200)
         .expect((response) => {
           expect(response.body.data).toStrictEqual(
@@ -205,7 +228,7 @@ describe('pageable', () => {
     });
   });
 
-  describe('limit & unpaged', () => {});
+  // describe('limit & unpaged', () => {});
 });
 
 function serialize({ id, title, description, createdAt, updatedAt }: TestDto) {

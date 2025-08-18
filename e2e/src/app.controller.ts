@@ -35,4 +35,9 @@ export class AppController {
   getTestsMaxSize5(@Paginate({ maxSize: 5 }) pageable: PaginateQuery): Promise<PaginateResponse<TestDto>> {
     return this.appService.listTests(pageable);
   }
+
+  @Get('/change-operand-separator')
+  async getChangeOperandSeparator(@Paginate({ operandSeparator: '@@@' }) pageable: PaginateQuery): Promise<PaginateResponse<TestDto>> {
+    return await this.appService.listTests(pageable);
+  }
 }

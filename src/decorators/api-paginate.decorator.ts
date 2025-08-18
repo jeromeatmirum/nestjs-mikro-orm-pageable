@@ -4,6 +4,7 @@ import { defaultPaginateOptions } from '../constants';
 import { PaginateOptions } from '../types';
 import { PaginateResponse } from '../dtos';
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 export function ApiPaginate(pageableOptions: PaginateOptions & { dto?: Function } = {}) {
   const { enableUnpaged, enableSize, enableSort, maxSize, dto } = { ...defaultPaginateOptions, ...pageableOptions };
   return applyDecorators(

@@ -1,9 +1,14 @@
 import { TestDto } from './test.dto';
 
+export const startDate = new Date(10000000000);
+
 export const makeTestData = (length = 1000) =>
   Array.from({ length }, (_, i) => {
     const id = i + 1;
-    return new TestDto(id, `Test ${id}`, isPrimeNumber(id) ? null : `Test ${Math.floor(id / 10)} description`, new Date(10000000000), new Date(10000000000));
+    const result = new Date(startDate);
+    result.setDate(result.getDate() + i);
+    return new TestDto(id, `Test ${id}`, isPrimeNumber(id) ? null : `Test ${Math.floor(id / 10)} description`, startDate, result);
+    //return new TestDto(id, `Test ${id}`, isPrimeNumber(id) ? null : `Test ${Math.floor(id / 10)} description`, startDate, startDate);
   });
 
 function isPrimeNumber(num: number): boolean {

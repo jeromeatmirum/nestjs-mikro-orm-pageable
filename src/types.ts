@@ -22,7 +22,7 @@ export type PaginateQuery<T extends Record<string, unknown> = NonNullable<unknow
   filter: { [column: string]: unknown };
 } & T;
 
-export type ExtendedPaginateQuery = PaginateQuery<{ limit?: number }>;
+export type ExtendedPaginateQuery = PaginateQuery<{ limit?: number; operandSeparator?: string }>;
 
 export interface Paginated<T extends object> {
   data: T[];
@@ -36,6 +36,7 @@ export type PaginateOptions = {
   enableSort?: boolean;
   limit?: number | null;
   maxSize?: number;
+  operandSeparator?: string;
 };
 
 export type PaginateDataQuery = Partial<Omit<PaginateQuery, 'offset' | 'totalPages' | 'totalItems'> & PaginateOptions>;

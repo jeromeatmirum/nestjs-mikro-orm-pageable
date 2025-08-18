@@ -1,11 +1,13 @@
 import { CustomParamFactory } from '@nestjs/common/interfaces';
+import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
-import { PaginateDataQuery, PaginateQuery } from '../types';
+import { ExtendedPaginateQuery, PaginateDataQuery, PaginateQuery } from '../types';
 import { Paginate } from './paginate.decorator';
 import { DEFAULT_MAX_SIZE } from '../constants';
 import { QueryOrder } from '@mikro-orm/core';
 
-function getParamDecoratorFactory<TData, TOutput>(decorator: Function): CustomParamFactory<TData, any, TOutput> {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+function getParamDecoratorFactory<TData, TOutput>(decorator: Function): CustomParamFactory<TData, TOutput> {
   class Test {
     public test(@decorator() _value: TOutput): void {}
   }
@@ -16,17 +18,25 @@ function getParamDecoratorFactory<TData, TOutput>(decorator: Function): CustomPa
 
 const decoratorFactory = getParamDecoratorFactory<Partial<PaginateDataQuery>, PaginateQuery>(Paginate);
 
+const defaultUrl = new URL('http://localhost:3000');
+
 function contextFactory(query: unknown) {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => ({
-        query
-      })
-    })
+  const req = {
+    protocol: 'http',
+    originalUrl: '/',
+    get: (requestVar: string) => {
+      if (requestVar === 'host') {
+        return defaultUrl.host;
+      }
+    },
+    query
   };
+  return new ExecutionContextHost([req]);
 }
 
-const defaultPageable: PaginateQuery = {
+const defaultOperandSeperator = ':';
+
+const defaultPageable: ExtendedPaginateQuery = {
   currentPage: 1,
   itemsPerPage: 10,
   offset: 0,
@@ -34,7 +44,9 @@ const defaultPageable: PaginateQuery = {
   totalItems: 0,
   unpaged: false,
   sortBy: [],
-  filter: {}
+  filter: {},
+  url: defaultUrl,
+  operandSeparator: defaultOperandSeperator
 };
 
 describe('PageableDefault', () => {
@@ -48,7 +60,10 @@ describe('PageableDefault', () => {
       totalPages: 0,
       totalItems: 0,
       unpaged: false,
-      sortBy: []
+      sortBy: [],
+      filter: {},
+      url: defaultUrl,
+      operandSeparator: defaultOperandSeperator
     });
   });
   it('should return custom default values when empty query is provided', () => {
@@ -81,14 +96,17 @@ describe('PageableDefault', () => {
           direction: 'asc',
           nullsFirst: true
         }
-      ]
+      ],
+      filter: {},
+      url: defaultUrl,
+      operandSeparator: defaultOperandSeperator
     });
   });
   it.each([
     {
       query: {
         page: '1',
-        itemsPerPage: '20',
+        limit: '20',
         sortBy: 'property[test];direction[asc];nulls-first[true]'
       },
       expected: {
@@ -104,13 +122,16 @@ describe('PageableDefault', () => {
             direction: 'asc',
             nullsFirst: true
           }
-        ]
+        ],
+        filter: {},
+        url: defaultUrl,
+        operandSeparator: defaultOperandSeperator
       }
     },
     {
       query: {
         page: '2',
-        itemsPerPage: '4',
+        limit: '4',
         sortBy: ['property[test];direction[asc];nulls-first[true]', 'property[@!*#-test2];direction[desc];nulls-first[false]', 'property[_test 3_];direction[asc]']
       },
       expected: {
@@ -135,7 +156,10 @@ describe('PageableDefault', () => {
             property: '_test 3_',
             direction: 'asc'
           }
-        ]
+        ],
+        filter: {},
+        url: defaultUrl,
+        operandSeparator: defaultOperandSeperator
       }
     }
   ])('should return parsed values when query is provided', ({ query, expected }) => {
@@ -214,7 +238,7 @@ describe('PageableDefault', () => {
       {
         query: {
           page: '1',
-          itemsPerPage: '-20',
+          limit: '-20',
           unpaged: 'abc'
         },
         expected: {
@@ -224,7 +248,7 @@ describe('PageableDefault', () => {
       {
         query: {
           page: '-1',
-          itemsPerPage: '20',
+          limit: '20',
           sortBy: 'property[test];direction[xyz];nulls-first[true]'
         },
         expected: {
@@ -235,7 +259,7 @@ describe('PageableDefault', () => {
       {
         query: {
           page: 'abc',
-          itemsPerPage: 'xyz',
+          limit: 'xyz',
           sortBy: 'property[a.b];direction[asc];nulls-first[true]'
         },
         expected: {
@@ -259,7 +283,7 @@ describe('PageableDefault', () => {
       },
       {
         query: {
-          itemsPerPage: `${Number.MAX_SAFE_INTEGER + 1}`
+          limit: `${Number.MAX_SAFE_INTEGER + 1}`
         },
         expected: {
           ...defaultPageable
@@ -268,7 +292,7 @@ describe('PageableDefault', () => {
       {
         query: {
           page: `${Math.floor(Number.MAX_SAFE_INTEGER / 2)}`,
-          itemsPerPage: '3'
+          limit: '3'
         },
         expected: {
           ...defaultPageable

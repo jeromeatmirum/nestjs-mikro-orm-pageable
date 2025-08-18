@@ -1,23 +1,29 @@
+import { vi, type Mock } from 'vitest';
 import { EntityRepository, SqlEntityRepository } from '@mikro-orm/knex';
 import { QueryOrder } from '@mikro-orm/core';
 import { PageFactory } from './page-factory';
 import { DriverName, PaginateQuery } from './types';
 
 type QbTestMethodMap = {
-  select: jest.Mock;
-  join: jest.Mock;
-  joinAndSelect: jest.Mock;
-  from: jest.Mock;
-  where: jest.Mock;
-  orderBy: jest.Mock;
-  limit: jest.Mock;
-  offset: jest.Mock;
-  getCount: jest.Mock;
-  getResultList: jest.Mock;
+  clone: Mock;
+  select: Mock;
+  join: Mock;
+  leftJoin: Mock;
+  joinAndSelect: Mock;
+  from: Mock;
+  where: Mock;
+  andWhere: Mock;
+  orderBy: Mock;
+  limit: Mock;
+  offset: Mock;
+  getCount: Mock;
+  getResultList: Mock;
 };
 
+const defaultUrl = new URL('http://localhost:3000');
+
 const defaultPageable: PaginateQuery = {
-  currentPage: 0,
+  currentPage: 1,
   itemsPerPage: 10,
   offset: 0,
   totalPages: 0,
@@ -32,26 +38,58 @@ const pageableFactory = (values?: Partial<PaginateQuery>): PaginateQuery => ({
   ...values
 });
 
-const mockRepoFactory = <T extends object = any>(values?: { count?: number; resultList?: T[]; driverName?: DriverName | string }): [SqlEntityRepository<T>, QbTestMethodMap, jest.Mock] => {
+const addFactoryArgs = (values: PaginateQuery): PaginateQuery => {
+  return {
+    ...values,
+    url: defaultUrl
+  };
+};
+
+const paginatedOutput = (values?: Partial<PaginateQuery>) => {
+  const currentPage = values?.currentPage ?? 0;
+  const totalPages = values?.totalPages ?? 0;
+  const nextPage = currentPage < totalPages ? currentPage + 1 : undefined;
+  const previousPage = currentPage > 1 ? currentPage - 1 : undefined;
+  const url = values?.url ?? defaultUrl;
+  const linksBaseUrl = `${url.origin}${url.pathname}`;
+  return {
+    meta: values,
+    links:
+      (values?.totalPages ?? 0 > 0)
+        ? {
+            current: `${linksBaseUrl}?page=${values?.currentPage}&limit=${values?.itemsPerPage}`,
+            first: `${linksBaseUrl}?page=1&limit=${values?.itemsPerPage}`,
+            last: `${linksBaseUrl}?page=${values?.totalPages}&limit=${values?.itemsPerPage}`,
+            next: nextPage ? `${linksBaseUrl}?page=${nextPage}&limit=${values?.itemsPerPage}` : undefined,
+            previous: previousPage ? `${linksBaseUrl}?page=${previousPage}&limit=${values?.itemsPerPage}` : undefined
+          }
+        : {}
+  };
+};
+
+const mockRepoFactory = <T extends object = any>(values?: { count?: number; resultList?: T[]; driverName?: DriverName | string }): [SqlEntityRepository<T>, QbTestMethodMap, Mock] => {
   const { count = 0, resultList = [], driverName = '' } = values || {};
   const qbTestMethodMap: QbTestMethodMap = {
-    select: jest.fn().mockReturnThis(),
-    join: jest.fn().mockReturnThis(),
-    joinAndSelect: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    offset: jest.fn().mockReturnThis(),
-    getCount: jest.fn().mockResolvedValue(count),
-    getResultList: jest.fn().mockReturnValue(resultList)
+    clone: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    join: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    joinAndSelect: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    offset: vi.fn().mockReturnThis(),
+    getCount: vi.fn().mockResolvedValue(count),
+    getResultList: vi.fn().mockReturnValue(resultList)
   };
-  const createQueryBuilder = jest.fn().mockReturnValue(qbTestMethodMap);
+  const createQueryBuilder = vi.fn().mockReturnValue(qbTestMethodMap);
   return [
     {
       createQueryBuilder,
-      getEntityManager: jest.fn().mockReturnValue({
-        getDriver: jest.fn().mockReturnValue({
+      getEntityManager: vi.fn().mockReturnValue({
+        getDriver: vi.fn().mockReturnValue({
           constructor: {
             name: driverName
           }
@@ -69,10 +107,10 @@ describe('PageFactory', () => {
       it('should create a Paginated object given a repository', async () => {
         const [mockRepo] = mockRepoFactory();
         const pageable = pageableFactory();
-        const page = await new PageFactory(pageable, mockRepo).create();
+        const page = await new PageFactory(addFactoryArgs(pageable), mockRepo).create();
         expect(page).toEqual({
           data: [],
-          pageable
+          ...paginatedOutput(pageable)
         });
       });
     });
@@ -89,14 +127,10 @@ describe('PageFactory', () => {
           itemsPerPage: 5,
           offset: 5
         });
-        const page = await new PageFactory(pageable, mockRepo).create();
+        const page = await new PageFactory(addFactoryArgs(pageable), mockRepo).create();
         expect(page).toEqual({
           data: resultList,
-          meta: {
-            ...pageable,
-            totalPages: 4,
-            totalItems: count
-          }
+          ...paginatedOutput({ ...pageable, totalPages: 4, totalItems: count })
         });
       });
     });
@@ -106,7 +140,7 @@ describe('PageFactory', () => {
       it('should pass the right values to the select method on the query builder', async () => {
         const [mockRepo, qbTestMethodMap] = mockRepoFactory();
         const pageable = pageableFactory();
-        await new PageFactory(pageable, mockRepo)
+        await new PageFactory(addFactoryArgs(pageable), mockRepo)
           .config({
             select: ['id', 'name']
           })
@@ -144,7 +178,7 @@ describe('PageFactory', () => {
             }
           ]
         });
-        await new PageFactory(pageable, mockRepo)
+        await new PageFactory(addFactoryArgs(pageable), mockRepo)
           .config({
             sortable: ['id', 'name', 'age', 'gender']
           })
@@ -161,7 +195,7 @@ describe('PageFactory', () => {
       it('should call the join method on the query builder for each relation', async () => {
         const [mockRepo, qbTestMethodMap] = mockRepoFactory();
         const pageable = pageableFactory();
-        await new PageFactory(pageable, mockRepo)
+        await new PageFactory(addFactoryArgs(pageable), mockRepo)
           .config({
             relations: [
               {
@@ -174,15 +208,16 @@ describe('PageFactory', () => {
               {
                 property: 'b.c',
                 alias: 'cAlias',
-                cond: 'b.id = c.id',
+                cond: { 'b.id': 'c.id' },
                 path: 'b.c'
               }
             ]
           })
           .create();
-        expect(qbTestMethodMap.join).toHaveBeenCalledWith('a', 'a', undefined, undefined, undefined);
-        expect(qbTestMethodMap.join).toHaveBeenCalledWith('b', 'b', undefined, 'leftJoin', undefined);
-        expect(qbTestMethodMap.join).toHaveBeenCalledWith('b.c', 'cAlias', 'b.id = c.id', undefined, 'b.c');
+        expect(qbTestMethodMap.join).toHaveBeenCalledTimes(2);
+        expect(qbTestMethodMap.join).toHaveBeenCalledWith('a', 'a', undefined);
+        expect(qbTestMethodMap.leftJoin).toHaveBeenCalledWith('b', 'b', undefined);
+        expect(qbTestMethodMap.join).toHaveBeenCalledWith('b.c', 'cAlias', { 'b.id': 'c.id' });
       });
     });
     describe('where', () => {
@@ -192,12 +227,12 @@ describe('PageFactory', () => {
         const where = {
           $and: [{ id: { $gt: 1 }, 'length(title)': { $gt: 1 } }]
         };
-        await new PageFactory(pageable, mockRepo)
+        await new PageFactory(addFactoryArgs(pageable), mockRepo)
           .config({
             where
           })
           .create();
-        expect(qbTestMethodMap.where).toHaveBeenCalledWith(where);
+        expect(qbTestMethodMap.andWhere).toHaveBeenCalledWith(where);
       });
     });
     describe('alias', () => {
@@ -205,7 +240,7 @@ describe('PageFactory', () => {
         const [mockRepo, _qbTestMethodMap, createQueryBuilder] = mockRepoFactory();
         const pageable = pageableFactory();
         const alias = 'testAlias';
-        await new PageFactory(pageable, mockRepo)
+        await new PageFactory(addFactoryArgs(pageable), mockRepo)
           .config({
             alias
           })
@@ -222,7 +257,7 @@ describe('PageFactory', () => {
         resultList
       });
       const pageable = pageableFactory();
-      const page = await new PageFactory(pageable, mockRepo).create();
+      const page = await new PageFactory(addFactoryArgs(pageable), mockRepo).create();
       expect(page.data).toEqual(resultList);
     });
 
@@ -233,7 +268,7 @@ describe('PageFactory', () => {
         resultList
       });
       const pageable = pageableFactory();
-      const page = await new PageFactory(pageable, mockRepo).map((result) => ({ ...result, idPlus1: result.id + 1 })).create();
+      const page = await new PageFactory(addFactoryArgs(pageable), mockRepo).map((result) => ({ ...result, idPlus1: result.id + 1 })).create();
       expect(page.data).toEqual(resultList.map((item) => ({ ...item, idPlus1: item.id + 1 })));
     });
   });

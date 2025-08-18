@@ -16,8 +16,8 @@ export class TestEntity {
   title!: string;
   @Property({ nullable: true })
   description!: string | null;
-  @Property({ type: 'date', onCreate: () => new Date() })
+  @Property({ type: 'timestamp', onCreate: () => new Date() })
   createdAt: Date = new Date();
-  @Property({ type: 'date', onUpdate: () => new Date() })
+  @Property({ type: 'timestamp', onUpdate: () => new Date() })
   updatedAt: Date = new Date();
 }

@@ -3,13 +3,12 @@ import { ColumnsFilters, FilterToken, PaginateQuery } from './types';
 import { GroupOperator, QBFilterQuery, QueryOperator } from '@mikro-orm/core';
 import { fixColumnAlias, getKeyByValue, getPropertiesByColumnName, isISODate } from './helpers';
 
-export function parseFilter(query: PaginateQuery): ColumnsFilters {
+export function parseFilter(query: PaginateQuery, operandSeperator: string): ColumnsFilters {
   if (!query.filter) {
     return {};
   }
 
   const MAX_OPERATOR = 4; // eg: $and:$not:$eq:$null
-  const OPERAND_SEPARATOR = ':';
 
   const filters: ColumnsFilters = {};
   Object.keys(query.filter).map((column) => {
@@ -27,7 +26,7 @@ export function parseFilter(query: PaginateQuery): ColumnsFilters {
         value: undefined
       };
 
-      const matches = raw.split(OPERAND_SEPARATOR);
+      const matches = raw.split(operandSeperator);
       const maxOperandCount = matches.length > MAX_OPERATOR ? MAX_OPERATOR : matches.length;
 
       for (let i = 0; i < maxOperandCount; i++) {
@@ -71,7 +70,7 @@ export function parseFilter(query: PaginateQuery): ColumnsFilters {
 
 export function addWhereCondition<T extends object>(qb: QueryBuilder<T>, column: string, filter: ColumnsFilters): QBFilterQuery<T> {
   const columnProperties = getPropertiesByColumnName(column);
-  const alias = fixColumnAlias(columnProperties, qb as any);
+  const alias = fixColumnAlias(columnProperties, qb);
   const filterQuery: QBFilterQuery<T> = {};
 
   if (!columnProperties.isNested) {
@@ -111,8 +110,8 @@ export function addWhereCondition<T extends object>(qb: QueryBuilder<T>, column:
   return filterQuery;
 }
 
-export function addFilter<T extends object>(qb: QueryBuilder<T>, query: PaginateQuery): QueryBuilder<T> {
-  const filter = parseFilter(query);
+export function addFilter<T extends object>(qb: QueryBuilder<T>, query: PaginateQuery, operandSeperator: string): QueryBuilder<T> {
+  const filter = parseFilter(query, operandSeperator);
   const filterEntries = Object.entries(filter);
 
   filterEntries.map(([column]) => {

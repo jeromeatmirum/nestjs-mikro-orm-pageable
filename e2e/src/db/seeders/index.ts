@@ -6,7 +6,7 @@ const testData = makeTestData();
 
 export class DatabaseSeeder extends Seeder {
   async run(em: EntityManager): Promise<void> {
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < testData.length; i++) {
       em.create('TestEntity', {
         title: testData[i].title,
         description: testData[i].description,

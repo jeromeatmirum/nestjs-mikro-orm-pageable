@@ -7,7 +7,7 @@ import type { FastifyRequest } from 'fastify';
 import { QueryOrder } from '@mikro-orm/core';
 
 export const Paginate = createParamDecorator((data: PaginateDataQuery, ctx: ExecutionContext): ExtendedPaginateQuery => {
-  const { currentPage: defaultPage, itemsPerPage: defaultSize, enableUnpaged, enableSize, enableSort, maxSize, limit, ...defaultData } = { ...defaultPaginateOptions, ...data };
+  const { currentPage: defaultPage, itemsPerPage: defaultSize, enableUnpaged, enableSize, enableSort, maxSize, limit, operandSeparator, ...defaultData } = { ...defaultPaginateOptions, ...data };
   const request: ExpressRequest | FastifyRequest = ctx.switchToHttp().getRequest();
 
   const paginateQuery: ExtendedPaginateQuery = {
@@ -25,7 +25,7 @@ export const Paginate = createParamDecorator((data: PaginateDataQuery, ctx: Exec
   if (isExpressRequest(request)) {
     paginateQuery.url = new URL(request.protocol + '://' + request.get('host') + request.originalUrl);
   } else {
-    paginateQuery.url = new URL(request.protocol + '://' + request.hostname + request.url);
+    paginateQuery.url = new URL(request.protocol + '://' + request.host + request.url);
   }
 
   const parsedPageInt = hasParam(query, 'page') ? maybeParseIntParam(query.page) : undefined;
@@ -33,14 +33,15 @@ export const Paginate = createParamDecorator((data: PaginateDataQuery, ctx: Exec
   const pageIndex = page - 1;
 
   const parsedSizeInt = enableSize && hasParam(query, 'limit') ? maybeParseIntParam(query.limit) : undefined;
-  const size =
-    isSafePositiveInteger(parsedSizeInt) && parsedSizeInt <= maxSize
-      ? parsedSizeInt
-      : isSafePositiveInteger(defaultSize) && defaultSize <= maxSize
-      ? defaultSize
-      : paginateQuery.itemsPerPage <= maxSize
-      ? paginateQuery.itemsPerPage
-      : maxSize;
+
+  let size = maxSize;
+  if (isSafePositiveInteger(parsedSizeInt) && parsedSizeInt <= maxSize) {
+    size = parsedSizeInt;
+  } else if (isSafePositiveInteger(defaultSize) && defaultSize <= maxSize) {
+    size = defaultSize;
+  } else if (paginateQuery.itemsPerPage <= maxSize) {
+    size = paginateQuery.itemsPerPage;
+  }
 
   let offset: number | undefined = pageIndex * size;
   if (!isSafeNonNegativeInteger(offset)) {
@@ -69,6 +70,10 @@ export const Paginate = createParamDecorator((data: PaginateDataQuery, ctx: Exec
 
   if (limit !== null) {
     paginateQuery.limit = limit;
+  }
+
+  if (typeof operandSeparator === 'string') {
+    paginateQuery.operandSeparator = operandSeparator;
   }
 
   if (hasParam(query, 'filter')) {
@@ -121,7 +126,9 @@ function maybeParseSortParam(param: unknown): Sort[] | undefined {
     parsedStrings.push(param);
   } else if (Array.isArray(param) && param.length) {
     param.forEach((value) => {
-      typeof value === 'string' && parsedStrings.push(value);
+      if (typeof value === 'string') {
+        parsedStrings.push(value);
+      }
     });
   }
   if (!parsedStrings.length) {
