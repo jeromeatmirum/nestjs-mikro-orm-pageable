@@ -1,6 +1,6 @@
 {
   "name": "@jeromeatmirum/nestjs-mikro-orm-paginate",
-  "version": "0.5.1",
+  "version": "1.0.0",
   "description": "A query package for convenient pagination, filtering and sorting implementation with MikroORM repositories in Nest.js.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -40,9 +40,9 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/emulienfou/nestjs-mikro-orm-pageable/issues"
+    "url": "https://github.com/jeromeatmirum/nestjs-mikro-orm-pageable/issues"
   },
-  "homepage": "https://github.com/emulienfou/nestjs-mikro-orm-pageable#readme",
+  "homepage": "https://github.com/jeromeatmirum/nestjs-mikro-orm-pageable#readme",
   "publishConfig": {
     "access": "public"
   },

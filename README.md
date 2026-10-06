@@ -5,6 +5,9 @@
 A query package for convenient pagination, filtering and sorting implementation with [MikroORM](https://mikro-orm.io)
 repositories in [Nest.js](https://nestjs.com).
 
+> This is a fork of [emulienfou/nestjs-mikro-orm-pageable](https://github.com/emulienfou/nestjs-mikro-orm-pageable),
+> published as `@jeromeatmirum/nestjs-mikro-orm-paginate`.
+
 ## Features
 
 - Pagination conforms to [JSON:API](https://jsonapi.org)
@@ -33,11 +36,11 @@ repositories in [Nest.js](https://nestjs.com).
 
 ```bash
 # With Yarn
-yarn add @emulienfou/nestjs-mikro-orm-paginate
+yarn add @jeromeatmirum/nestjs-mikro-orm-paginate
 # With NPM
-npm install @emulienfou/nestjs-mikro-orm-paginate
+npm install @jeromeatmirum/nestjs-mikro-orm-paginate
 # With PNPM
-pnpm add @emulienfou/nestjs-mikro-orm-paginate
+pnpm add @jeromeatmirum/nestjs-mikro-orm-paginate
 ```
 
 ### Basic Usage
@@ -45,7 +48,7 @@ pnpm add @emulienfou/nestjs-mikro-orm-paginate
 ```typescript
 // articles.controller.ts
 import { Controller, Get } from '@nestjs/common';
-import { Paginate, PaginateResponse } from '@emulienfou/nestjs-mikro-orm-paginate';
+import { Paginate, PaginateResponse } from '@jeromeatmirum/nestjs-mikro-orm-paginate';
 import { ArticlesService } from './articles.service.ts';
 import { ArticleDto } from './dtos/article.dto.ts';
 
@@ -66,7 +69,7 @@ export class ArticlesController {
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/sqlite';
-import { PaginateQuery, PaginateResponse, PageFactory } from '@emulienfou/nestjs-mikro-orm-paginate';
+import { PaginateQuery, PaginateResponse, PageFactory } from '@jeromeatmirum/nestjs-mikro-orm-paginate';
 import { ArticleEntity } from './article.entity';
 import { ArticleDto } from './dtos/article.dto.ts';
 
@@ -137,7 +140,7 @@ Use the `@ApiPaginate` decorator for swagger integration:
 ```typescript
 // articles.controller.ts
 import { Controller, Get } from '@nestjs/common';
-import { ApiPaginate, Paginate } from '@emulienfou/nestjs-mikro-orm-paginate';
+import { ApiPaginate, Paginate } from '@jeromeatmirum/nestjs-mikro-orm-paginate';
 import { ArticlesService } from './articles.service.ts';
 import { ArticleDto } from './dtos/article.dto.ts';
 
