@@ -1,6 +1,6 @@
 {
-  "name": "@emulienfou/nestjs-mikro-orm-paginate",
-  "version": "0.5.0",
+  "name": "@jeromeatmirum/nestjs-mikro-orm-paginate",
+  "version": "0.5.1",
   "description": "A query package for convenient pagination, filtering and sorting implementation with MikroORM repositories in Nest.js.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/emulienfou/nestjs-mikro-orm-pageable.git"
+    "url": "git+https://github.com/jeromeatmirum/nestjs-mikro-orm-pageable.git"
   },
   "keywords": [
     "nestjs",
@@ -103,6 +103,20 @@
     "@mikro-orm/better-sqlite": "^6.0.0 || ^7.0.0",
     "express": "^5",
     "fastify": "^5"
+  },
+  "peerDependenciesMeta": {
+    "@mikro-orm/postgresql": {
+      "optional": true
+    },
+    "@mikro-orm/better-sqlite": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    }
   },
   "overrides": {
     "@mikro-orm/nestjs": {
